@@ -79,23 +79,11 @@ def ml_loop():
             platform_x = scene_info.platform[0] + 20
             ball_x.append(scene_info.ball[0])
             ball_y.append(scene_info.ball[1])
-            distance_R = 200 - platform_x - 40
-            distance_L = platform_x
             i = i + 1;
-
             target = destination()
-            # print(target)
-            if target :
-                if target - platform_x > 0 : 
-                    comm.send_instruction(scene_info.frame, PlatformAction.MOVE_RIGHT)
-                elif target - platform_x < 0 :
-                    comm.send_instruction(scene_info.frame, PlatformAction.MOVE_LEFT)                  
-                else : 
-                    comm.send_instruction(scene_info.frame, PlatformAction.NONE)
-            else :
-                if ball_x[i] - platform_x > 0 : 
-                    comm.send_instruction(scene_info.frame, PlatformAction.MOVE_RIGHT)
-                elif ball_x[i] - platform_x < 0 :
-                    comm.send_instruction(scene_info.frame, PlatformAction.MOVE_LEFT)                  
-                else : 
-                    comm.send_instruction(scene_info.frame, PlatformAction.NONE)
+            if target - platform_x > 0 : 
+                comm.send_instruction(scene_info.frame, PlatformAction.MOVE_RIGHT)
+            elif target - platform_x < 0 :
+                comm.send_instruction(scene_info.frame, PlatformAction.MOVE_LEFT)                  
+            else : 
+                comm.send_instruction(scene_info.frame, PlatformAction.NONE)
