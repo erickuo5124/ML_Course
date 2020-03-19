@@ -32,31 +32,23 @@ def ml_loop():
         
         direction_x = (ball_x[i] - ball_x[i-1])
         direction_y = (ball_y[i] - ball_y[i-1])
-        #print(str(direction_x) + " " + str(direction_y))
         target_x = ball_x[i]
         target_y = ball_y[i]
+        
         # first bounce
-        while target_x > 0 and target_x < 200 and target_y > 0 :
+        while target_y < 400 :
             target_x += direction_x
             target_y += direction_y
-            #print(str(target_x) + " " + str(target_y))
-            if target_y > 400 :
-                return target_x
-        # print("here")
-        if target_x < 0 or target_x > 200 :
-            direction_x = -direction_x
-        else :
-            return 0
-        target_x += direction_x
+            
+            if target_x < 0 or target_x > 200 :
+                direction_x = -direction_x
+                target_x += direction_x
+            elif target_y < 0 :
+                direction_y = -direction_y
+                target_y += direction_y
+        #print(str(target_x) + " " + str(target_y))
+        return target_x
         
-        # second bounce 
-        while target_x > 0 and target_x < 200 and target_y > 0 :
-            target_x += direction_x
-            target_y += direction_y
-            if target_y > 400 :
-                return target_x
-        
-        return 0
 
     # 2. Inform the game process that ml process is ready before start the loop.
     comm.ml_ready()
