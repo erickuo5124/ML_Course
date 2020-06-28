@@ -1,89 +1,79 @@
-"""
-The template of the main script of the machine learning process
-"""
+class MLPlay:
+    def __init__(self, player):
+        self.player = player
+        if self.player == "player1":
+            self.player_no = 0
+        elif self.player == "player2":
+            self.player_no = 1
+        elif self.player == "player3":
+            self.player_no = 2
+        elif self.player == "player4":
+            self.player_no = 3
+        self.car_vel = 0                            # speed initial
+        self.car_pos = (0,0)                        # pos initial
+        self.car_lane = self.car_pos[0] // 70       # lanes 0 ~ 8
+        self.lanes = [35, 105, 175, 245, 315, 385, 455, 525, 595]  # lanes center
+        pass
 
-import games.arkanoid.communication as comm
-from games.arkanoid.communication import (
-    SceneInfo, GameStatus, PlatformAction
-)
-
-
-def ml_loop():
-    """
-    The main loop of the machine learning process
-
-    This loop is run in a separate process, and communicates with the game process.
-
-    Note that the game process won't wait for the ml process to generate the
-    GameInstruction. It is possible that the frame of the GameInstruction
-    is behind of the current frame in the game process. Try to decrease the fps
-    to avoid this situation.
-    """
-
-    # === Here is the execution order of the loop === #
-    # 1. Put the initialization code here.
-    ball_served = False
-    i = 0
-    ball_x = [0]
-    ball_y = [0]
-    def destination():
-        if i == 0 :
-            return 0
+    def update(self, scene_info):
         
-        direction_x = (ball_x[i] - ball_x[i-1])
-        direction_y = (ball_y[i] - ball_y[i-1])
-        target_x = ball_x[i]
-        target_y = ball_y[i]
+        if len(scene_info[self.player]) != 0:
+            self.car_pos = scene_info[self.player]
+
+        for car in scene_info["cars_info"]:
+            if car["id"]==self.player_no:
+                self.car_vel = car["velocity"]
+
+        if scene_info["status"] != "ALIVE":
+            return "RESET"
+        self.car_lane = self.car_pos[0] // 70
         
-        # first bounce
-        while target_y < 400 :
-            target_x += direction_x
-            target_y += direction_y
-            
-            if target_x < 0 or target_x > 200 :
-                direction_x = -direction_x
-                target_x += direction_x
-            elif target_y < 0 :
-                direction_y = -direction_y
-                target_y += direction_y
-        #print(str(target_x) + " " + str(target_y))
-        return target_x
+        front = self.car_pos[1] - 40
+        left = self.car_pos[0] - 20
+        right = 630 - self.car_pos[0] - 20
+        back = 800-self.car_pos[1]
+        front_left = False
+        front_right = False
+        back_left = False
+        back_right = False
+        lane_dis = [self.car_pos[1]- 40] * 9
+
+        for car in scene_info["cars_info"]:
+            if car["id"] != self.player_no:
+                x = self.car_pos[0] - car["pos"][0] # x relative position
+                y = self.car_pos[1] - car["pos"][1] # y relative position
+
+                if y < lane_dis[car["pos"][0]//70]:
+                    lane_dis[car["pos"][0]//70] = y
+
+                if x <= 40 and x >= -40 :
+                    if y > 0 and y < front: front = y
+                    else: back = -y
+                elif x < 0 :
+                    if y > 80 and y < 250: front_right = True
+                    elif y < -80 and y > -200: back_right = True
+                    elif y < 200 and y > -80 and (-x) < right: right = -x
+                elif x > 0:
+                    if y > 80 and y < 250: front_left = True
+                    elif y < -80 and y > -200: back_left = True
+                    elif y < 200 and y > -80 and x < left: left = x
         
+        max_dis_lane = self.car_lane 
+        for i in range((self.car_pos[0]-left)//70,(self.car_pos[0]+right)//70):
+            if lane_dis[max_dis_lane] < lane_dis[i]:
+                max_dis_lane = i
 
-    # 2. Inform the game process that ml process is ready before start the loop.
-    comm.ml_ready()
+        print((self.car_pos[0]-left)//70,(self.car_pos[0]+right)//70)
+        print(max_dis_lane)
+        
+        if self.car_pos[0] - self.lanes[max_dis_lane] > 5 and left > 25:
+            return ["SPEED", "MOVE_LEFT"]
+        elif self.car_pos[0 ] - self.lanes[max_dis_lane] < -5 and right > 25:
+            return ["SPEED", "MOVE_RIGHT"]
+        else :return ["SPEED"]
 
-    # 3. Start an endless loop.
-    while True:
-        # 3.1. Receive the scene information sent from the game process.
-        scene_info = comm.get_scene_info()
-
-        # 3.2. If the game is over or passed, the game process will reset
-        #      the scene and wait for ml process doing resetting job.
-        if scene_info.status == GameStatus.GAME_OVER or \
-                scene_info.status == GameStatus.GAME_PASS:
-            # Do some stuff if needed
-            ball_served = False
-
-            # 3.2.1. Inform the game process that ml process is ready
-            comm.ml_ready()
-            continue
-
-        # 3.3. Put the code here to handle the scene information
-
-        # 3.4. Send the instruction for this frame to the game process
-        if not ball_served:
-            comm.send_instruction(scene_info.frame, PlatformAction.SERVE_TO_LEFT)
-            ball_served = True
-        else:
-            platform_x = scene_info.platform[0] + 20
-            ball_x.append(scene_info.ball[0])
-            ball_y.append(scene_info.ball[1])
-            i = i + 1;
-            target = destination()
-            if target - platform_x > 0 : 
-                comm.send_instruction(scene_info.frame, PlatformAction.MOVE_RIGHT)
-            elif target - platform_x < 0 :
-                comm.send_instruction(scene_info.frame, PlatformAction.MOVE_LEFT)                  
-            else : 
-                comm.send_instruction(scene_info.frame, PlatformAction.NONE)
+    def reset(self):
+        """
+        Reset the status
+        """
+        pass
