@@ -43,7 +43,7 @@ class MLPlay:
                 x = self.car_pos[0] - car["pos"][0] # x relative position
                 y = self.car_pos[1] - car["pos"][1] # y relative position
 
-                if y < lane_dis[car["pos"][0]//70]:
+                if y < lane_dis[car["pos"][0]//70] and y > 0:
                     lane_dis[car["pos"][0]//70] = y
 
                 if x <= 40 and x >= -40 :
@@ -59,18 +59,19 @@ class MLPlay:
                     elif y < 200 and y > -80 and x < left: left = x
         
         max_dis_lane = self.car_lane 
-        for i in range((self.car_pos[0]-left)//70,(self.car_pos[0]+right)//70):
+        for i in range((self.car_pos[0]-left)//70+1, self.car_lane):
             if lane_dis[max_dis_lane] < lane_dis[i]:
                 max_dis_lane = i
-
-        print((self.car_pos[0]-left)//70,(self.car_pos[0]+right)//70)
-        print(max_dis_lane)
+        for i in range((self.car_pos[0]+right)//70, self.car_lane, -1):
+            if lane_dis[max_dis_lane] < lane_dis[i]:
+                max_dis_lane = i
         
-        if self.car_pos[0] - self.lanes[max_dis_lane] > 5 and left > 25:
-            return ["SPEED", "MOVE_LEFT"]
-        elif self.car_pos[0 ] - self.lanes[max_dis_lane] < -5 and right > 25:
-            return ["SPEED", "MOVE_RIGHT"]
-        else :return ["SPEED"]
+        if   lane_dis[self.car_pos[0]//70] < 200 and self.car_pos[0] - self.lanes[max_dis_lane] > 5  and  left > 5: return ["BRAKE", "MOVE_LEFT"]
+        elif lane_dis[self.car_pos[0]//70] < 200 and self.car_pos[0] - self.lanes[max_dis_lane] < -5 and right > 5: return ["BRAKE", "MOVE_RIGHT"]
+        elif lane_dis[self.car_pos[0]//70] < 200 : return["BRAKE"]
+        elif self.car_pos[0] - self.lanes[max_dis_lane] > 5  and  left > 5: return ["SPEED", "MOVE_LEFT"]
+        elif self.car_pos[0] - self.lanes[max_dis_lane] < -5 and right > 5: return ["SPEED", "MOVE_RIGHT"]
+        else : return ["SPEED"]
 
     def reset(self):
         """
